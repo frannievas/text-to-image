@@ -11,7 +11,7 @@ from utils import *
 
 dataset = '102flowers' #
 need_256 = True # set to True for stackGAN
-
+datapath = "~/resources/102flowers/"
 
 
 if dataset == '102flowers':
@@ -19,7 +19,8 @@ if dataset == '102flowers':
     images.shape = [8000, 64, 64, 3]
     captions_ids = [80000, any]
     """
-    cwd = os.getcwd()
+    # cwd = os.getcwd()
+    cwd = datapath
     img_dir = os.path.join(cwd, '102flowers')
     caption_dir = os.path.join(cwd, 'text_c10')
     VOC_FIR = cwd + '/vocab.txt'
