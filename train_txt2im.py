@@ -157,92 +157,94 @@ def main_train():
         # print(sample_sentence[i])
     sample_sentence = tl.prepro.pad_sequences(sample_sentence, padding='post')
 
-    n_epoch = 100 # 600
+    n_epoch = 10 # 600
     print_freq = 1
     n_batch_epoch = int(n_images_train / batch_size)
     # exit()
-    for epoch in range(0, n_epoch+1):
-        start_time = time.time()
+    print("Starting loop!")
+    with tf.device('/device:GPU:0'):
+        for epoch in range(0, n_epoch+1):
+            start_time = time.time()
 
-        if epoch !=0 and (epoch % decay_every == 0):
-            new_lr_decay = lr_decay ** (epoch // decay_every)
-            sess.run(tf.assign(lr_v, lr * new_lr_decay))
-            log = " ** new learning rate: %f" % (lr * new_lr_decay)
-            print(log)
-            # logging.debug(log)
-        elif epoch == 0:
-            log = " ** init lr: %f  decay_every_epoch: %d, lr_decay: %f" % (lr, decay_every, lr_decay)
-            print(log)
+            if epoch !=0 and (epoch % decay_every == 0):
+                new_lr_decay = lr_decay ** (epoch // decay_every)
+                print(sess.run(tf.assign(lr_v, lr * new_lr_decay)))
+                log = " ** new learning rate: %f" % (lr * new_lr_decay)
+                print(log)
+                # logging.debug(log)
+            elif epoch == 0:
+                log = " ** init lr: %f  decay_every_epoch: %d, lr_decay: %f" % (lr, decay_every, lr_decay)
+                print(log)
 
-        for step in range(n_batch_epoch):
-            step_time = time.time()
-            ## get matched text
-            idexs = get_random_int(min=0, max=n_captions_train-1, number=batch_size)
-            b_real_caption = captions_ids_train[idexs]
-            b_real_caption = tl.prepro.pad_sequences(b_real_caption, padding='post')
-            ## get real image
-            b_real_images = images_train[np.floor(np.asarray(idexs).astype('float')/n_captions_per_image).astype('int')]
-            # save_images(b_real_images, [ni, ni], 'samples/step1_gan-cls/train_00.png')
-            ## get wrong caption
-            idexs = get_random_int(min=0, max=n_captions_train-1, number=batch_size)
-            b_wrong_caption = captions_ids_train[idexs]
-            b_wrong_caption = tl.prepro.pad_sequences(b_wrong_caption, padding='post')
-            ## get wrong image
-            idexs2 = get_random_int(min=0, max=n_images_train-1, number=batch_size)
-            b_wrong_images = images_train[idexs2]
-            ## get noise
-            b_z = np.random.normal(loc=0.0, scale=1.0, size=(sample_size, z_dim)).astype(np.float32)
-                # b_z = np.random.uniform(low=-1, high=1, size=[batch_size, z_dim]).astype(np.float32)
+            for step in range(n_batch_epoch):
+                step_time = time.time()
+                ## get matched text
+                idexs = get_random_int(min=0, max=n_captions_train-1, number=batch_size)
+                b_real_caption = captions_ids_train[idexs]
+                b_real_caption = tl.prepro.pad_sequences(b_real_caption, padding='post')
+                ## get real image
+                b_real_images = images_train[np.floor(np.asarray(idexs).astype('float')/n_captions_per_image).astype('int')]
+                # save_images(b_real_images, [ni, ni], 'samples/step1_gan-cls/train_00.png')
+                ## get wrong caption
+                idexs = get_random_int(min=0, max=n_captions_train-1, number=batch_size)
+                b_wrong_caption = captions_ids_train[idexs]
+                b_wrong_caption = tl.prepro.pad_sequences(b_wrong_caption, padding='post')
+                ## get wrong image
+                idexs2 = get_random_int(min=0, max=n_images_train-1, number=batch_size)
+                b_wrong_images = images_train[idexs2]
+                ## get noise
+                b_z = np.random.normal(loc=0.0, scale=1.0, size=(sample_size, z_dim)).astype(np.float32)
+                    # b_z = np.random.uniform(low=-1, high=1, size=[batch_size, z_dim]).astype(np.float32)
 
-            b_real_images = threading_data(b_real_images, prepro_img, mode='train')   # [0, 255] --> [-1, 1] + augmentation
-            b_wrong_images = threading_data(b_wrong_images, prepro_img, mode='train')
-            ## updates text-to-image mapping
-            if epoch < 50:
-                errRNN, _ = sess.run([rnn_loss, rnn_optim], feed_dict={
-                                                t_real_image : b_real_images,
-                                                t_wrong_image : b_wrong_images,
-                                                t_real_caption : b_real_caption,
-                                                t_wrong_caption : b_wrong_caption})
-            else:
-                errRNN = 0
+                b_real_images = threading_data(b_real_images, prepro_img, mode='train')   # [0, 255] --> [-1, 1] + augmentation
+                b_wrong_images = threading_data(b_wrong_images, prepro_img, mode='train')
+                ## updates text-to-image mapping
+                if epoch < 50:
+                    errRNN, _ = sess.run([rnn_loss, rnn_optim], feed_dict={
+                                                    t_real_image : b_real_images,
+                                                    t_wrong_image : b_wrong_images,
+                                                    t_real_caption : b_real_caption,
+                                                    t_wrong_caption : b_wrong_caption})
+                else:
+                    errRNN = 0
 
-            ## updates D
-            errD, _ = sess.run([d_loss, d_optim], feed_dict={
-                            t_real_image : b_real_images,
-                            # t_wrong_image : b_wrong_images,
-                            t_wrong_caption : b_wrong_caption,
-                            t_real_caption : b_real_caption,
-                            t_z : b_z})
-            ## updates G
-            errG, _ = sess.run([g_loss, g_optim], feed_dict={
-                            t_real_caption : b_real_caption,
-                            t_z : b_z})
+                ## updates D
+                errD, _ = sess.run([d_loss, d_optim], feed_dict={
+                                t_real_image : b_real_images,
+                                # t_wrong_image : b_wrong_images,
+                                t_wrong_caption : b_wrong_caption,
+                                t_real_caption : b_real_caption,
+                                t_z : b_z})
+                ## updates G
+                errG, _ = sess.run([g_loss, g_optim], feed_dict={
+                                t_real_caption : b_real_caption,
+                                t_z : b_z})
 
-            print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4fs, d_loss: %.8f, g_loss: %.8f, rnn_loss: %.8f" \
-                        % (epoch, n_epoch, step, n_batch_epoch, time.time() - step_time, errD, errG, errRNN))
+                print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4fs, d_loss: %.8f, g_loss: %.8f, rnn_loss: %.8f" \
+                            % (epoch, n_epoch, step, n_batch_epoch, time.time() - step_time, errD, errG, errRNN))
 
-        if (epoch + 1) % print_freq == 0:
-            print(" ** Epoch %d took %fs" % (epoch, time.time()-start_time))
-            img_gen, rnn_out = sess.run([net_g.outputs, net_rnn.outputs], feed_dict={
-                                        t_real_caption : sample_sentence,
-                                        t_z : sample_seed})
+            if (epoch + 1) % print_freq == 0:
+                print(" ** Epoch %d took %fs" % (epoch, time.time()-start_time))
+                img_gen, rnn_out = sess.run([net_g.outputs, net_rnn.outputs], feed_dict={
+                                            t_real_caption : sample_sentence,
+                                            t_z : sample_seed})
 
-            # img_gen = threading_data(img_gen, prepro_img, mode='rescale')
-            save_images(img_gen, [ni, ni], 'samples/step1_gan-cls/train_{:02d}.png'.format(epoch))
+                # img_gen = threading_data(img_gen, prepro_img, mode='rescale')
+                save_images(img_gen, [ni, ni], 'samples/step1_gan-cls/train_{:02d}.png'.format(epoch))
 
-        ## save model
-        if (epoch != 0) and (epoch % 10) == 0:
-            tl.files.save_npz(net_cnn.all_params, name=net_cnn_name, sess=sess)
-            tl.files.save_npz(net_rnn.all_params, name=net_rnn_name, sess=sess)
-            tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
-            tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
-            print("[*] Save checkpoints SUCCESS!")
+            ## save model
+            if (epoch != 0) and (epoch % 10) == 0:
+                tl.files.save_npz(net_cnn.all_params, name=net_cnn_name, sess=sess)
+                tl.files.save_npz(net_rnn.all_params, name=net_rnn_name, sess=sess)
+                tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
+                tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
+                print("[*] Save checkpoints SUCCESS!")
 
-        if (epoch != 0) and (epoch % 100) == 0:
-            tl.files.save_npz(net_cnn.all_params, name=net_cnn_name+str(epoch), sess=sess)
-            tl.files.save_npz(net_rnn.all_params, name=net_rnn_name+str(epoch), sess=sess)
-            tl.files.save_npz(net_g.all_params, name=net_g_name+str(epoch), sess=sess)
-            tl.files.save_npz(net_d.all_params, name=net_d_name+str(epoch), sess=sess)
+            if (epoch != 0) and (epoch % 100) == 0:
+                tl.files.save_npz(net_cnn.all_params, name=net_cnn_name+str(epoch), sess=sess)
+                tl.files.save_npz(net_rnn.all_params, name=net_rnn_name+str(epoch), sess=sess)
+                tl.files.save_npz(net_g.all_params, name=net_g_name+str(epoch), sess=sess)
+                tl.files.save_npz(net_d.all_params, name=net_d_name+str(epoch), sess=sess)
 
         # if (epoch != 0) and (epoch % 200) == 0:
         #     sess.run(tf.initialize_variables(adam_vars))
