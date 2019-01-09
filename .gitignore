@@ -1,7 +1,9 @@
-checkpoint/*
+checkpoint/
+checkpoint-save/
 102flowers/*
 cub_birds_200_2011/*
-samples/main*
+samples/
+TODOS
 backup/
 *.txt
 *.pdf
