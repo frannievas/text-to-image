@@ -17,6 +17,8 @@ from model import *
 import model
 
 ###======================== PREPARE DATA ====================================###
+dataset = 'cub'
+
 print("Loading data from pickle ...")
 import pickle
 with open("_vocab.pickle", 'rb') as f:
@@ -142,14 +144,26 @@ def main_train():
     sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(sample_size, z_dim)).astype(np.float32)
         # sample_seed = np.random.uniform(low=-1, high=1, size=(sample_size, z_dim)).astype(np.float32)]
     n = int(sample_size / ni)
-    sample_sentence = ["the flower shown has yellow anther red pistil and bright red petals."] * n + \
-                      ["this flower has petals that are yellow, white and purple and has dark lines"] * n + \
-                      ["the petals on this flower are white with a yellow center"] * n + \
-                      ["this flower has a lot of small round pink petals."] * n + \
-                      ["this flower is orange in color, and has petals that are ruffled and rounded."] * n + \
-                      ["the flower has yellow petals and the center of it is brown."] * n + \
-                      ["this flower has petals that are blue and white."] * n +\
-                      ["these white flowers have petals that start off white in color and end in a white towards the tips."] * n
+
+    if dataset == "102flowers":
+        sample_sentence = ["the flower shown has yellow anther red pistil and bright red petals."] * n + \
+                          ["this flower has petals that are yellow, white and purple and has dark lines"] * n + \
+                          ["the petals on this flower are white with a yellow center"] * n + \
+                          ["this flower has a lot of small round pink petals."] * n + \
+                          ["this flower is orange in color, and has petals that are ruffled and rounded."] * n + \
+                          ["the flower has yellow petals and the center of it is brown."] * n + \
+                          ["this flower has petals that are blue and white."] * n +\
+                          ["these white flowers have petals that start off white in color and end in a white towards the tips."] * n
+
+    elif dataset == "cub":
+        sample_sentence = ["this bird has yellow belly and purple breast with red feathers"] * n + \
+                          ["small bird with a large brown beak, gray feathers and breast"] * n + \
+                          ["this bird is mostly white with an red belly, has a red eyebrow and long beak"] * n + \
+                          ["this is a larger bird with a black crown, white belly and breast, red wings"] * n + \
+                          ["a big yellow bird with a blue breast, black bill and yellow eyebrows"] * n + \
+                          ["a bright green bird with crest, a black mask and brown conical bill"] * n + \
+                          ["this big bird has yellow wings, a green breast, and long feathers"] * n + \
+                          ["the large bird is all pure purple with red and yellow breast and a black eye."] * n
 
     # sample_sentence = captions_ids_test[0:sample_size]
     for i, sentence in enumerate(sample_sentence):
