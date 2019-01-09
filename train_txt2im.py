@@ -120,7 +120,10 @@ def main_train():
     # adam_vars = tl.layers.get_variables_with_name('Adam', False, True)
 
     ###============================ TRAINING ====================================###
-    sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+    config=tf.ConfigProto(allow_soft_placement=True)
+    config.gpu_options.allow_growth = True
+    sess = tf.Session(config=config)
+
     tl.layers.initialize_global_variables(sess)
 
     # load the latest checkpoints
@@ -157,7 +160,7 @@ def main_train():
         # print(sample_sentence[i])
     sample_sentence = tl.prepro.pad_sequences(sample_sentence, padding='post')
 
-    n_epoch = 10 # 600
+    n_epoch = 100 # 600
     print_freq = 1
     n_batch_epoch = int(n_images_train / batch_size)
     # exit()
